@@ -10,7 +10,7 @@ const emailAllowlistUrl =
 const Result = (result: string) => {
   return (
     <div>
-      <h1>Email Address Verification Result</h1>
+      <h1>Email Address/Domain Verification Result</h1>
       <div>{result}</div>
     </div>
   );
@@ -19,18 +19,19 @@ const Result = (result: string) => {
 const Form = (input: string) => {
   return (
     <form action="">
-      <input type="text" name="email" value={input} />
+      <label for="email">Email Address or Domain </label>
+      <input type="text" id="email" name="email" value={input} />
       <button type="submit">Check</button>
     </form>
   );
 };
 
-function validateEmail(email: string) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
+function validateEmailOrDomain(text: string) {
+  const regex = /^([^\s@]+@)?[^\s@]+\.[^\s@]+$/;
+  return regex.test(text);
 }
 
-async function verifyEmail(email: string) {
+async function verifyEmailOrDomain(text: string) {
   const blocklist: string[] = [];
   try {
     const response = await fetch(emailBlocklistUrl);
@@ -43,7 +44,8 @@ async function verifyEmail(email: string) {
   } catch (error: any) {
     console.error(`fetch error: ${error.message}`);
   }
-  return blocklist.includes(email.split("@")[1]);
+  const domain = text.split("@")[1] || text;
+  return blocklist.includes(domain);
 }
 
 app.use(renderer);
@@ -55,16 +57,20 @@ app.get("/", async (c) => {
   if (email === "") {
     return c.render(<>{renderHtml}</>);
   }
-  if (!validateEmail(email)) {
-    email = `Invalid Email Address: ${email}`;
+  if (!validateEmailOrDomain(email)) {
+    email = `Invalid Email Address or Domain: ${email}`;
     renderHtml.push(Result(email));
     return c.render(<>{renderHtml}</>);
   }
-  const verifyResult = await verifyEmail(email);
+  const verifyResult = await verifyEmailOrDomain(email);
   if (verifyResult) {
-    renderHtml.push(Result(`Email Adress is in blocklist: ${email}`));
+    renderHtml.push(
+      Result(`The Domain of this Email Adress is in blocklist: ${email}`)
+    );
   } else {
-    renderHtml.push(Result(`Email Adress is not in blocklist: ${email}`));
+    renderHtml.push(
+      Result(`The Domain of this Email Adress is not in blocklist: ${email}`)
+    );
   }
   return c.render(<>{renderHtml}</>);
 });
