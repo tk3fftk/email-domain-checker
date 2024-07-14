@@ -1,1 +1,6 @@
 h1 { font-family: Arial, Helvetica, sans-serif; }
+
+.whois {
+  font-family: Consolas;
+  background-color: #f0f0f0; /* light gray */
+}

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { renderer } from "./renderer";
+import whois from "whois";
 
 const app = new Hono();
 const emailBlocklistUrl =
@@ -12,6 +13,19 @@ const Result = (result: string) => {
     <div>
       <h1>Email Address/Domain Verification Result</h1>
       <div>{result}</div>
+    </div>
+  );
+};
+
+const Whois = (result: string) => {
+  return (
+    <div>
+      <h2>Whois Result</h2>
+      <div class="whois">
+        <pre>
+          <code>{result}</code>
+        </pre>
+      </div>
     </div>
   );
 };
@@ -31,7 +45,7 @@ function validateEmailOrDomain(text: string) {
   return regex.test(text);
 }
 
-async function verifyEmailOrDomain(text: string) {
+async function verifyEmailOrDomain(domain: string) {
   const blocklist: string[] = [];
   try {
     const response = await fetch(emailBlocklistUrl);
@@ -44,8 +58,19 @@ async function verifyEmailOrDomain(text: string) {
   } catch (error: any) {
     console.error(`fetch error: ${error.message}`);
   }
-  const domain = text.split("@")[1] || text;
   return blocklist.includes(domain);
+}
+
+async function whoisLookup(domain: string) {
+  return new Promise<string>((resolve, reject) => {
+    whois.lookup(domain, function (err, data) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(data || "");
+      }
+    });
+  });
 }
 
 app.use(renderer);
@@ -62,7 +87,8 @@ app.get("/", async (c) => {
     renderHtml.push(Result(email));
     return c.render(<>{renderHtml}</>);
   }
-  const verifyResult = await verifyEmailOrDomain(email);
+  const domain = email.split("@")[1] || email;
+  const verifyResult = await verifyEmailOrDomain(domain);
   if (verifyResult) {
     renderHtml.push(
       Result(
@@ -77,6 +103,8 @@ app.get("/", async (c) => {
         The domain of this Email address is not in suspected list but be careful: ${email}`
       )
     );
+    const whoisResult = (await whoisLookup(domain)) || "N/A";
+    renderHtml.push(Whois(whoisResult));
   }
   return c.render(<>{renderHtml}</>);
 });
