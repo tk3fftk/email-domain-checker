@@ -65,11 +65,17 @@ app.get("/", async (c) => {
   const verifyResult = await verifyEmailOrDomain(email);
   if (verifyResult) {
     renderHtml.push(
-      Result(`The Domain of this Email Adress is in blocklist: ${email}`)
+      Result(
+        `💣️捨てアドとして利用される疑いがあるEmailドメインです / 
+        The domain of this Email adress is suspected as a disposable email address: ${email}`
+      )
     );
   } else {
     renderHtml.push(
-      Result(`The Domain of this Email Adress is not in blocklist: ${email}`)
+      Result(
+        `捨てアド疑いのリストにはありませんが、下記の情報も参考にしてください / 
+        The domain of this Email address is not in suspected list but be careful: ${email}`
+      )
     );
   }
   return c.render(<>{renderHtml}</>);
