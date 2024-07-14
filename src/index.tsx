@@ -52,6 +52,9 @@ app.get("/", async (c) => {
   const renderHtml = [];
   let email = c.req.query("email") || "";
   renderHtml.push(Form(email));
+  if (email === "") {
+    return c.render(<>{renderHtml}</>);
+  }
   if (!validateEmail(email)) {
     email = `Invalid Email Address: ${email}`;
     renderHtml.push(Result(email));
