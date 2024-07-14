@@ -67,7 +67,7 @@ async function whoisLookup(domain: string) {
       if (err) {
         reject(err);
       } else {
-        resolve(data || "");
+        resolve(data || "N/A");
       }
     });
   });
@@ -103,7 +103,7 @@ app.get("/", async (c) => {
         The domain of this Email address is not in suspected list but be careful: ${email}`
       )
     );
-    const whoisResult = (await whoisLookup(domain)) || "N/A";
+    const whoisResult = await whoisLookup(domain);
     renderHtml.push(Whois(whoisResult));
   }
   return c.render(<>{renderHtml}</>);
