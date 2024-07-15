@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import { renderer } from "./renderer";
+import dns from "node:dns";
 
 const app = new Hono();
+const dnsPromises = dns.promises;
 const emailBlocklistUrl =
   "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/disposable_email_blocklist.conf";
 const emailAllowlistUrl =
@@ -13,6 +15,19 @@ const Result = (result: string) => {
     <div>
       <h1>Email Address/Domain Verification Result</h1>
       <div>{result}</div>
+    </div>
+  );
+};
+
+const Dns = (result: string) => {
+  return (
+    <div>
+      <h2>DNS Lookup Result</h2>
+      <div class="dns">
+        <pre>
+          <code>{result}</code>
+        </pre>
+      </div>
     </div>
   );
 };
@@ -68,7 +83,7 @@ async function verifyEmailOrDomain(domain: string) {
 
 async function whoisLookup(domain: string) {
   const url = `${whoisBaseUrl}/${domain}`;
-  let responseText = "";
+  let responseText = "N/A";
 
   try {
     const response = await fetch(url);
@@ -82,6 +97,16 @@ async function whoisLookup(domain: string) {
     console.error(`fetch error: ${error.message}`);
   }
   return responseText;
+}
+
+async function dnsLookup(domain: string) {
+  try {
+    const response = await dnsPromises.resolveAny(domain);
+    return response.map((r) => JSON.stringify(r)).join("\n");
+  } catch (error: any) {
+    console.error(`dns error: ${error.message}`);
+  }
+  return "N/A";
 }
 
 app.use(renderer);
@@ -103,17 +128,19 @@ app.get("/", async (c) => {
   if (verifyResult) {
     renderHtml.push(
       Result(
-        `💣️捨てアドとして利用される疑いがあるEmailドメインです / 
-        The domain of this Email adress is suspected as a disposable email address: ${email}`
+        `💣️捨てアドとして利用される疑いがあるEmailドメインです💣️ / 
+        💣️The domain of this Email adress is suspected as a disposable email address💣️: ${email}`
       )
     );
   } else {
     renderHtml.push(
       Result(
-        `捨てアド疑いのリストにはありませんが、下記の情報も参考にしてください / 
+        `捨てアド疑いのリストにはありませんが、下記の情報も参考にしてください 👇 / 
         The domain of this Email address is not in suspected list but be careful: ${email}`
       )
     );
+    const dnsResult = await dnsLookup(domain);
+    renderHtml.push(Dns(dnsResult));
     const whoisResult = await whoisLookup(domain);
     renderHtml.push(Whois(whoisResult));
   }
