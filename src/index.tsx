@@ -9,6 +9,7 @@ const emailBlocklistUrl =
 const emailAllowlistUrl =
   "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/allowlist.conf";
 const whoisBaseUrl = "https://api.whoisproxy.info/whois";
+const digBaseUrl = "https://api.whoisproxy.info/dig";
 
 const Result = (result: string) => {
   return (
@@ -22,7 +23,12 @@ const Result = (result: string) => {
 const Dns = (result: string) => {
   return (
     <div>
-      <h2>DNS Lookup Result</h2>
+      <h2>
+        DNS Lookup Result (Using{" "}
+        <a href="https://chanshige.hatenablog.com/entry/2019/02/16/184907">
+          Dig API)
+        </a>
+      </h2>
       <div class="dns">
         <pre>
           <code>{result}</code>
@@ -100,13 +106,20 @@ async function whoisLookup(domain: string) {
 }
 
 async function dnsLookup(domain: string) {
+  const url = `${digBaseUrl}/${domain}`;
+  let responseText = "N/A";
+
   try {
-    const response = await dnsPromises.resolveAny(domain);
-    return response.map((r) => JSON.stringify(r)).join("\n");
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+    responseText = (await response.text()) as string;
+    responseText = JSON.parse(responseText).results.join("\n");
   } catch (error: any) {
     console.error(`dns error: ${error.message}`);
   }
-  return "N/A";
+  return responseText;
 }
 
 app.use(renderer);
@@ -135,7 +148,7 @@ app.get("/", async (c) => {
   } else {
     renderHtml.push(
       Result(
-        `捨てアド疑いのリストにはありませんが、下記の情報も参考にしてください 👇 / 
+        `捨てアド疑いのリストにはありませんが、下記の情報も参考にしてください👇 / 
         The domain of this Email address is not in suspected list but be careful: ${email}`
       )
     );
