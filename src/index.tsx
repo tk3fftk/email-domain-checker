@@ -6,12 +6,31 @@ const emailBlocklistUrl =
   "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/disposable_email_blocklist.conf";
 const emailAllowlistUrl =
   "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/allowlist.conf";
+const whoisBaseUrl = "https://api.whoisproxy.info/whois";
 
 const Result = (result: string) => {
   return (
     <div>
       <h1>Email Address/Domain Verification Result</h1>
       <div>{result}</div>
+    </div>
+  );
+};
+
+const Whois = (result: string) => {
+  return (
+    <div>
+      <h2>
+        Whois Result (Using{" "}
+        <a href="https://chanshige.hatenablog.com/entry/2019/02/16/184907">
+          Whois API)
+        </a>
+      </h2>
+      <div class="whois">
+        <pre>
+          <code>{result}</code>
+        </pre>
+      </div>
     </div>
   );
 };
@@ -31,7 +50,7 @@ function validateEmailOrDomain(text: string) {
   return regex.test(text);
 }
 
-async function verifyEmailOrDomain(text: string) {
+async function verifyEmailOrDomain(domain: string) {
   const blocklist: string[] = [];
   try {
     const response = await fetch(emailBlocklistUrl);
@@ -44,8 +63,25 @@ async function verifyEmailOrDomain(text: string) {
   } catch (error: any) {
     console.error(`fetch error: ${error.message}`);
   }
-  const domain = text.split("@")[1] || text;
   return blocklist.includes(domain);
+}
+
+async function whoisLookup(domain: string) {
+  const url = `${whoisBaseUrl}/${domain}`;
+  let responseText = "";
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+    responseText = (await response.text()) as string;
+    responseText = JSON.parse(responseText).results.raw.join("\n");
+    return responseText;
+  } catch (error: any) {
+    console.error(`fetch error: ${error.message}`);
+  }
+  return responseText;
 }
 
 app.use(renderer);
@@ -62,7 +98,8 @@ app.get("/", async (c) => {
     renderHtml.push(Result(email));
     return c.render(<>{renderHtml}</>);
   }
-  const verifyResult = await verifyEmailOrDomain(email);
+  const domain = email.split("@")[1] || email;
+  const verifyResult = await verifyEmailOrDomain(domain);
   if (verifyResult) {
     renderHtml.push(
       Result(
@@ -77,6 +114,8 @@ app.get("/", async (c) => {
         The domain of this Email address is not in suspected list but be careful: ${email}`
       )
     );
+    const whoisResult = await whoisLookup(domain);
+    renderHtml.push(Whois(whoisResult));
   }
   return c.render(<>{renderHtml}</>);
 });
