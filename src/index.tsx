@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { renderer } from "./renderer";
-import whois from "whois";
 
 const app = new Hono();
 const emailBlocklistUrl =
   "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/disposable_email_blocklist.conf";
 const emailAllowlistUrl =
   "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/allowlist.conf";
+const whoisBaseUrl = "https://api.whoisproxy.info/whois";
 
 const Result = (result: string) => {
   return (
@@ -20,7 +20,12 @@ const Result = (result: string) => {
 const Whois = (result: string) => {
   return (
     <div>
-      <h2>Whois Result</h2>
+      <h2>
+        Whois Result (Using{" "}
+        <a href="https://chanshige.hatenablog.com/entry/2019/02/16/184907">
+          Whois API)
+        </a>
+      </h2>
       <div class="whois">
         <pre>
           <code>{result}</code>
@@ -62,15 +67,21 @@ async function verifyEmailOrDomain(domain: string) {
 }
 
 async function whoisLookup(domain: string) {
-  return new Promise<string>((resolve, reject) => {
-    whois.lookup(domain, function (err, data) {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(data || "N/A");
-      }
-    });
-  });
+  const url = `${whoisBaseUrl}/${domain}`;
+  let responseText = "";
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+    responseText = (await response.text()) as string;
+    responseText = JSON.parse(responseText).results.raw.join("\n");
+    return responseText;
+  } catch (error: any) {
+    console.error(`fetch error: ${error.message}`);
+  }
+  return responseText;
 }
 
 app.use(renderer);
