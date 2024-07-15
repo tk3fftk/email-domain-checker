@@ -1,9 +1,7 @@
 import { Hono } from "hono";
 import { renderer } from "./renderer";
-import dns from "node:dns";
 
 const app = new Hono();
-const dnsPromises = dns.promises;
 const emailBlocklistUrl =
   "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/disposable_email_blocklist.conf";
 const emailAllowlistUrl =
